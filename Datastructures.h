@@ -1,24 +1,24 @@
 /******************************************************************************
-  Copyright (c) 2013 Morten Houmøller Nygaard - www.mortz.dk - admin@mortz.dk
- 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
+ Copyright (c) 2013 Morten Houmøller Nygaard - www.mortz.dk - admin@mortz.dk
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+ Permission is hereby granted, free of charge, to any person obtaining a copy of
+ this software and associated documentation files (the "Software"), to deal in
+ the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ of the Software, and to permit persons to whom the Software is furnished to do
+ so, subject to the following conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-******************************************************************************/
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ ******************************************************************************/
 
 #ifndef _DATASTRUCTURES_H
 #define _DATASTRUCTURES_H
@@ -26,36 +26,27 @@ SOFTWARE.
 #include "Includes.h"
 
 typedef enum {
-	CONTINUE,
-	CLOSE_NORMAL=1000, 		/* The connection */
-	CLOSE_SHUTDOWN=1001, 	/* Server is shutting down */
-	CLOSE_PROTOCOL=1002, 	/* Some error in the protocol has happened */
-	CLOSE_TYPE=1003, 		/* The type (text, binary) was not supported */
-	CLOSE_UTF8=1007, 		/* The message wasn't in UTF8 */
-	CLOSE_POLICY=1008, 		/* The policy of the server has been broken */
-	CLOSE_BIG=1009,			/* The messages received is too big */
-	CLOSE_UNEXPECTED=1011 	/* Unexpected happened */
+	CONTINUE, CLOSE_NORMAL = 1000, /* The connection */
+	CLOSE_SHUTDOWN = 1001, /* Server is shutting down */
+	CLOSE_PROTOCOL = 1002, /* Some error in the protocol has happened */
+	CLOSE_TYPE = 1003, /* The type (text, binary) was not supported */
+	CLOSE_UTF8 = 1007, /* The message wasn't in UTF8 */
+	CLOSE_POLICY = 1008, /* The policy of the server has been broken */
+	CLOSE_BIG = 1009, /* The messages received is too big */
+	CLOSE_UNEXPECTED = 1011 /* Unexpected happened */
 } ws_connection_close;
 
 typedef enum {
-	UNKNOWN,
-	RFC6455,
-	HYBI10,
-	HYBI07,
-	HYBI00,
-	HIXIE75,
-	HTTP
+	UNKNOWN, RFC6455, HYBI10, HYBI07, HYBI00, HIXIE75, HTTP
 } ws_type;
 
 typedef enum {
-	NONE,
-	CHAT,
-	ECHO
+	NONE, CHAT, ECHO
 } ws_protocol;
 
 typedef struct {
 	char *host;
-	char *connection;	
+	char *connection;
 	char *key;
 	char *key1;
 	char *key2;
@@ -84,7 +75,7 @@ typedef struct {
 	char opcode[1];
 	char mask[4];
 	uint64_t len;
-	uint64_t enc_len; 
+	uint64_t enc_len;
 	uint64_t next_len;
 	char *msg;
 	char *next;
@@ -105,7 +96,7 @@ typedef struct ws_client_n {
 typedef struct {
 	int len;
 	ws_client *first;
-	ws_client *last;	
+	ws_client *last;
 	pthread_mutex_t lock;
 } ws_list;
 

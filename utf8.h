@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   utf8.h
  * Author: Pontus Östlund <spam@poppa.se>
  *
@@ -18,18 +18,18 @@
 
 typedef char XML_Char;
 typedef struct {
-  XML_Char        *name;
-  char            (*decoding_function)(unsigned short);
-  unsigned short  (*encoding_function)(unsigned char);
+	XML_Char *name;
+	char (*decoding_function)(unsigned short);
+	unsigned short (*encoding_function)(unsigned char);
 } xml_encoding;
 
-char        *utf8_encode       (const char *in);
-char        *utf8_decode       (const char *in);
-void         utf8_clean        (void *str);
-static char *xml_utf8_decode   (const XML_Char *, int, int *, const XML_Char *);
-static char *xml_utf8_encode   (const char *s, int len, int *newlen,
-                                const XML_Char *encoding);
-static void *emalloc           (size_t size);
-static void *erealloc          (void* ptr, size_t size);
+char *utf8_encode(const char *in);
+char *utf8_decode(const char *in);
+void utf8_clean(void *str);
+static char *xml_utf8_decode(const XML_Char *, int, int *, const XML_Char *);
+static char *xml_utf8_encode(const char *s, int len, int *newlen,
+		const XML_Char *encoding);
+static void *emalloc(size_t size);
+static void *erealloc(void* ptr, size_t size);
 
 #endif	/* _UTF8_H */

@@ -1,49 +1,48 @@
 /******************************************************************************
-  Copyright (c) 2013 Morten Houmøller Nygaard - www.mortz.dk - admin@mortz.dk
- 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
+ Copyright (c) 2013 Morten Houmøller Nygaard - www.mortz.dk - admin@mortz.dk
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+ Permission is hereby granted, free of charge, to any person obtaining a copy of
+ this software and associated documentation files (the "Software"), to deal in
+ the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ of the Software, and to permit persons to whom the Software is furnished to do
+ so, subject to the following conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-******************************************************************************/
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ ******************************************************************************/
 
 #include "Communicate.h"
 
-/** 
- * Converts the unsigned 64 bit integer from host byte order to network byte 
+/**
+ * Converts the unsigned 64 bit integer from host byte order to network byte
  * order.
  */
 uint64_t ntohl64(uint64_t value) {
 	static const int num = 42;
 
 	/**
-	 * If these check is true, the system is using the little endian 
+	 * If these check is true, the system is using the little endian
 	 * convention. Else the system is using the big endian convention, which
 	 * means that we do not have to represent our integers in another way.
 	 */
-	if (*(char *)&num == 42) {
-		const uint32_t high = (uint32_t)(value >> 32);
-		const uint32_t low = (uint32_t)(value & 0xFFFFFFFF);
+	if (*(char *) &num == 42) {
+		const uint32_t high = (uint32_t) (value >> 32);
+		const uint32_t low = (uint32_t) (value & 0xFFFFFFFF);
 
-		return (((uint64_t)(htonl(low))) << 32) | htonl(high);
+		return (((uint64_t) (htonl(low))) << 32) | htonl(high);
 	} else {
 		return value;
-	}	
+	}
 }
-
 
 /**
  * This function is suppose to get the remaining part of the message, if
@@ -51,22 +50,22 @@ uint64_t ntohl64(uint64_t value) {
  * And we are dealing with the RFC6455 convention.
  */
 uint64_t getRemainingMessage(ws_client *n, uint64_t msg_length) {
-	int buffer_length = 0; 
+	int buffer_length = 0;
 	uint64_t remaining_length = 0, final_length = 0;
 	char buffer[BUFFERSIZE];
 	ws_message *m = n->message;
 
 	do {
 		memset(buffer, '\0', BUFFERSIZE);
-	
+
 		/**
 		 * Receive new chunk of the message.
-		 */	
+		 */
 		if ((buffer_length = recv(n->socket_id, buffer, BUFFERSIZE, 0)) <= 0) {
 			printf("Didn't receive anything from remaining part of message. %d"
 					"\n\n", buffer_length);
 			fflush(stdout);
-			return 0;	
+			return 0;
 		}
 
 		/**
@@ -74,38 +73,38 @@ uint64_t getRemainingMessage(ws_client *n, uint64_t msg_length) {
 		 * eventually will merge messages together we have to have a check
 		 * whether the overall length we received is greater than the expected
 		 * length of the message.
-		 */ 
-	 	final_length = (msg_length+remaining_length+buffer_length);	
+		 */
+		final_length = (msg_length + remaining_length + buffer_length);
 
 		/**
 		 * If the overall message is longer than the expected length of the
 		 * message, we know that this chunk most contain the last part of the
 		 * original message, and the first chunk of a new message.
 		 */
-		if ( final_length > m->len ) {
-			uint64_t next_len = final_length-m->len;
-			m->next = (char *) malloc(sizeof(char)*next_len);
+		if (final_length > m->len) {
+			uint64_t next_len = final_length - m->len;
+			m->next = (char *) malloc(sizeof(char) * next_len);
 			if (m->next == NULL) {
 				printf("1: Couldn't allocate memory.\n\n");
 				fflush(stdout);
 				return 0;
 			}
 			memset(m->next, '\0', next_len);
-		   	memcpy(m->next, buffer + (buffer_length - next_len), next_len);
+			memcpy(m->next, buffer + (buffer_length - next_len), next_len);
 			m->next_len = next_len;
 			buffer_length = buffer_length - next_len;
 		}
 
 		remaining_length += buffer_length;
 
-		memcpy(m->msg + (msg_length+(remaining_length-buffer_length)), buffer, 
-				buffer_length);
-	} while( (msg_length + remaining_length) < m->len );
+		memcpy(m->msg + (msg_length + (remaining_length - buffer_length)),
+				buffer, buffer_length);
+	} while ((msg_length + remaining_length) < m->len);
 
 	return remaining_length;
 }
 
-ws_connection_close parseMessage(char *buffer, uint64_t buffer_length, 
+ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 		ws_client *n) {
 	ws_message *m = n->message;
 	int length, has_mask, skip, j;
@@ -118,7 +117,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	length = buffer[1] & 0x7f;
 
 	if (!has_mask) {
-		printf("Message didn't have masked data, received: 0x%x\n\n", 
+		printf("Message didn't have masked data, received: 0x%x\n\n",
 				buffer[1]);
 		fflush(stdout);
 		return CLOSE_PROTOCOL;
@@ -129,7 +128,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	 * length that the frame has set.
 	 *
 	 * length <= 125: We know that length is the actual length of the message,
-	 * 				  and that the maskin data must be placed 2 bytes further 
+	 * 				  and that the maskin data must be placed 2 bytes further
 	 * 				  ahead.
 	 * length == 126: We know that the length is an unsigned 16 bit integer,
 	 * 				  which is placed at the 2 next bytes, and that the masking
@@ -139,7 +138,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	 * 				  data must be further 2 bytes away.
 	 */
 	if (length <= 125) {
-		m->len += length;	
+		m->len += length;
 		skip = 6;
 		memcpy(&m->mask, buffer + 2, sizeof(m->mask));
 	} else if (length == 126) {
@@ -161,7 +160,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	} else {
 		printf("Obscure length received from client: %d\n\n", length);
 		fflush(stdout);
-		return CLOSE_BIG;	
+		return CLOSE_BIG;
 	}
 
 	/**
@@ -173,11 +172,11 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 		fflush(stdout);
 		return CLOSE_BIG;
 	}
-	
+
 	/**
 	 * Allocating memory to hold the message sent from the client.
 	 * We can do this because we now know the actual length ofr the message.
-	 */ 
+	 */
 	m->msg = (char *) malloc(sizeof(char) * (m->len + 1));
 	if (m->msg == NULL) {
 		printf("2: Couldn't allocate memory.\n\n");
@@ -186,7 +185,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	}
 	memset(m->msg, '\0', (m->len + 1));
 
-	buf_len = (buffer_length-skip);
+	buf_len = (buffer_length - skip);
 
 	/**
 	 * The message read from recv is larger than the message we are supposed
@@ -202,12 +201,12 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 			return CLOSE_UNEXPECTED;
 		}
 		memset(m->next, '\0', next_len);
-		memcpy(m->next, buffer + (m->len+skip), next_len);
+		memcpy(m->next, buffer + (m->len + skip), next_len);
 		m->next_len = next_len;
-		buf_len = m->len;	
+		buf_len = m->len;
 	}
 
-	memcpy(m->msg+message_length, buffer+skip, buf_len);
+	memcpy(m->msg + message_length, buffer + skip, buf_len);
 
 	message_length += buf_len;
 
@@ -224,11 +223,11 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	message_length += remaining_length;
 
 	/**
-	 * If this is true, our receival of the message has gone wrong, and we 
+	 * If this is true, our receival of the message has gone wrong, and we
 	 * have no other choice than closing the connection.
 	 */
 	if (message_length != m->len) {
-		printf("Message does not fit. Expected: %d but got %d\n\n", 
+		printf("Message does not fit. Expected: %d but got %d\n\n",
 				(int) m->len, (int) message_length);
 		fflush(stdout);
 		return CLOSE_POLICY;
@@ -237,7 +236,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
 	/**
 	 * If everything went well, we have to remove the masking from the data.
 	 */
-	for (i = 0, j = 0; i < message_length; i++, j++){
+	for (i = 0, j = 0; i < message_length; i++, j++) {
 		m->msg[j] = m->msg[i] ^ m->mask[j % 4];
 	}
 
@@ -248,7 +247,7 @@ ws_connection_close parseMessage(char *buffer, uint64_t buffer_length,
  * This function is used to get the whole message when using the Hybi-00
  * standard.
  */
-ws_connection_close getWholeMessage(char *buffer, uint64_t buffer_length, 
+ws_connection_close getWholeMessage(char *buffer, uint64_t buffer_length,
 		ws_client *n) {
 	uint64_t msg_length = buffer_length, i, j;
 	int buf_length;
@@ -270,7 +269,7 @@ ws_connection_close getWholeMessage(char *buffer, uint64_t buffer_length,
 	 * If a byte is equal to zero, we know that we have reached the end of
 	 * the message.
 	 */
-	for (i = 0; i < buffer_length; i++) {	
+	for (i = 0; i < buffer_length; i++) {
 		if (buffer[i] != '\xFF') {
 			n->message->msg[i] = buffer[i];
 		} else {
@@ -284,15 +283,15 @@ ws_connection_close getWholeMessage(char *buffer, uint64_t buffer_length,
 	 * data. The things done in the loop are basicly equivalent to what was
 	 * done above.
 	 */
-	do {	
+	do {
 		memset(buf, '\0', BUFFERSIZE);
 		if ((buf_length = recv(n->socket_id, buf, BUFFERSIZE, 0)) <= 0) {
 			printf("Didn't receive any message from client.\n\n");
 			fflush(stdout);
-			return CLOSE_PROTOCOL;	
+			return CLOSE_PROTOCOL;
 		}
 		msg_length += buf_length;
-	
+
 		temp = realloc(n->message->msg, msg_length);
 		if (temp == NULL) {
 			printf("5: Couldn't allocate memory.\n\n");
@@ -300,10 +299,10 @@ ws_connection_close getWholeMessage(char *buffer, uint64_t buffer_length,
 			return CLOSE_UNEXPECTED;
 		}
 		n->message->msg = temp;
-		memset(n->message->msg+(msg_length-buf_length), '\0', buf_length);
+		memset(n->message->msg + (msg_length - buf_length), '\0', buf_length);
 		temp = NULL;
 
-		for (j = 0, i = (msg_length-buf_length); i < msg_length; i++, j++) {	
+		for (j = 0, i = (msg_length - buf_length); i < msg_length; i++, j++) {
 			if (buf[j] != '\xFF') {
 				n->message->msg[i] = buf[j];
 			} else {
@@ -311,7 +310,7 @@ ws_connection_close getWholeMessage(char *buffer, uint64_t buffer_length,
 				return CONTINUE;
 			}
 		}
-	} while( msg_length < MAXMESSAGE );
+	} while (msg_length < MAXMESSAGE);
 
 	return CLOSE_UNEXPECTED;
 }
@@ -371,16 +370,16 @@ ws_connection_close encodeMessage(ws_message *m) {
 	/**
 	 * Hybi-00 message encoding
 	 */
-	m->hybi00 = malloc(m->len+2);
+	m->hybi00 = malloc(m->len + 2);
 	if (m->hybi00 == NULL) {
 		printf("9: Couldn't allocate memory.\n\n");
 		fflush(stdout);
 		return CLOSE_UNEXPECTED;
 	}
-	memset(m->hybi00, '\0', m->len+2);
+	memset(m->hybi00, '\0', m->len + 2);
 	m->hybi00[0] = 0;
-	m->hybi00[m->len+1] = '\xFF';
-	memcpy(m->hybi00+1, m->msg, m->len);
+	m->hybi00[m->len + 1] = '\xFF';
+	memcpy(m->hybi00 + 1, m->msg, m->len);
 
 	return CONTINUE;
 }
@@ -395,20 +394,20 @@ ws_connection_close communicate(ws_client *n, char *next, uint64_t next_len) {
 	if (n == NULL) {
 		printf("The client was not available anymore.");
 		fflush(stdout);
-		return CLOSE_PROTOCOL;	
+		return CLOSE_PROTOCOL;
 	}
 
 	if (n->headers == NULL) {
 		printf("The header was not available anymore.");
 		fflush(stdout);
-		return CLOSE_PROTOCOL;	
+		return CLOSE_PROTOCOL;
 	}
 
 	/**
 	 * If we are dealing with a Hypi-00 connection, we have to handle the
 	 * message receiving differently than the RFC6455 standard.
-	 **/	
-	if ( n->headers->type == HYBI00 ) {
+	 **/
+	if (n->headers->type == HYBI00) {
 
 		memset(buffer, '\0', BUFFERSIZE);
 
@@ -429,58 +428,58 @@ ws_connection_close communicate(ws_client *n, char *next, uint64_t next_len) {
 		 */
 		if (buffer[0] == '\xFF') {
 			printf("Client:\n"
-				  "\tSocket: %d\n"
-				  "\tAddress: %s\n"
-				  "reports that he is shutting down.\n\n", n->socket_id, 
-				  (char *) n->client_ip);
+					"\tSocket: %d\n"
+					"\tAddress: %s\n"
+					"reports that he is shutting down.\n\n", n->socket_id,
+					(char *) n->client_ip);
 			fflush(stdout);
 
-			return CLOSE_NORMAL;	
+			return CLOSE_NORMAL;
 		} else if (buffer[0] == '\x00') {
 			/**
 			 * Receive rest of the message.
 			 */
-			if ( (status = getWholeMessage(buffer+1, buf_len-1, n)) != 
-					CONTINUE ) {
-				return status; 
+			if ((status = getWholeMessage(buffer + 1, buf_len - 1, n))
+					!= CONTINUE) {
+				return status;
 			}
-			
-			/**	
+
+			/**
 			 * Encode the message to make it ready to be send to all others.
 			 */
-			if ( (status = encodeMessage(n->message)) != CONTINUE) {
+			if ((status = encodeMessage(n->message)) != CONTINUE) {
 				return status;
 			}
 		}
-	} else if ( n->headers->type == HYBI07 || n->headers->type == RFC6455 
-			|| n->headers->type == HYBI10 ) {
+	} else if (n->headers->type == HYBI07 || n->headers->type == RFC6455
+			|| n->headers->type == HYBI10) {
 		/*
 		 * Receiving and decoding the message.
 		 */
 		do {
 			memset(buffer, '\0', BUFFERSIZE);
-				
+
 			memcpy(buffer, next, next_len);
 
 			/**
 			 * If we end in this case, we have not got enough of the frame to
-			 * do something useful to it. Therefore, do yet another read 
+			 * do something useful to it. Therefore, do yet another read
 			 * operation.
 			 */
-			if (next_len <= 6 || ((next[1] & 0x7f) == 126 && next_len <= 8) ||
-					((next[1] & 0x7f) == 127 && next_len <= 14)) {
-				if ((buffer_length = recv(n->socket_id, (buffer+next_len), 
-								(BUFFERSIZE-next_len), 0)) <= 0) {
+			if (next_len <= 6 || ((next[1] & 0x7f) == 126 && next_len <= 8)
+					|| ((next[1] & 0x7f) == 127 && next_len <= 14)) {
+				if ((buffer_length = recv(n->socket_id, (buffer + next_len),
+						(BUFFERSIZE - next_len), 0)) <= 0) {
 					printf("Didn't receive any message from client.\n\n");
 					fflush(stdout);
-					return CLOSE_PROTOCOL;	
+					return CLOSE_PROTOCOL;
 				}
 			}
 
-			buf_len = (uint64_t)(buffer_length + next_len);
+			buf_len = (uint64_t) (buffer_length + next_len);
 
 			/**
-			 * We need the opcode to conclude which type of message we 
+			 * We need the opcode to conclude which type of message we
 			 * received.
 			 */
 			if (n->message->opcode[0] == '\0') {
@@ -490,60 +489,65 @@ ws_connection_close communicate(ws_client *n, char *next, uint64_t next_len) {
 			/**
 			 * Get the full message and remove the masking from it.
 			 */
-			if ( (status = parseMessage(buffer, buf_len, n)) != CONTINUE) {
+			if ((status = parseMessage(buffer, buf_len, n)) != CONTINUE) {
 				return status;
 			}
 
 			next_len = 0;
-		} while( !(buffer[0] & 0x80) );	
+		} while (!(buffer[0] & 0x80));
 
 		/**
 		 * Checking which type of frame the client has sent.
 		 */
-		if (n->message->opcode[0] == '\x88' || n->message->opcode[0] == '\x08') {
+		if (n->message->opcode[0] == '\x88'
+				|| n->message->opcode[0] == '\x08') {
 			/**
 			 * CLOSE: client wants to close connection, so we do.
 			 **/
 			printf("Client:\n"
-				  "\tSocket: %d\n"
-				  "\tAddress: %s\n"
-				  "reports that he is shutting down.\n\n", n->socket_id, 
-				  (char *) n->client_ip);
+					"\tSocket: %d\n"
+					"\tAddress: %s\n"
+					"reports that he is shutting down.\n\n", n->socket_id,
+					(char *) n->client_ip);
 			fflush(stdout);
-			
+
 			return CLOSE_NORMAL;
-		} else if (n->message->opcode[0] == '\x8A' || n->message->opcode[0] == '\x0A') {
+		} else if (n->message->opcode[0] == '\x8A'
+				|| n->message->opcode[0] == '\x0A') {
 			/**
 			 * PONG: Client is still alive
 			 **/
 			printf("Pong arrived\n\n");
-			fflush(stdout);	
+			fflush(stdout);
 			return CLOSE_TYPE;
-		} else if (n->message->opcode[0] == '\x89' || n->message->opcode[0] == '\x09') {
-			/** 
+		} else if (n->message->opcode[0] == '\x89'
+				|| n->message->opcode[0] == '\x09') {
+			/**
 			 * PING: I am still alive
 			 **/
 			printf("Ping arrived\n\n");
 			fflush(stdout);
 			return CLOSE_TYPE;
-		} else if (n->message->opcode[0] == '\x02' || n->message->opcode[0] == '\x82') {
-			/** 
-			 * BINARY: data. 
+		} else if (n->message->opcode[0] == '\x02'
+				|| n->message->opcode[0] == '\x82') {
+			/**
+			 * BINARY: data.
 			 * TODO: find out what to do here!
 			 **/
 			printf("Binary data arrived\n\n");
 			fflush(stdout);
 			return CLOSE_TYPE;
-		} else if (n->message->opcode[0] == '\x01' || n->message->opcode[0] == '\x81') {
-			/** 
-			 * TEXT: encode the message to make it ready to be send to all 
+		} else if (n->message->opcode[0] == '\x01'
+				|| n->message->opcode[0] == '\x81') {
+			/**
+			 * TEXT: encode the message to make it ready to be send to all
 			 * 		 others.
 			 **/
-			if ( (status = encodeMessage(n->message)) != CONTINUE) {
+			if ((status = encodeMessage(n->message)) != CONTINUE) {
 				return status;
 			}
 		} else {
-			printf("Something very strange happened, received opcode: 0x%x\n\n", 
+			printf("Something very strange happened, received opcode: 0x%x\n\n",
 					n->message->opcode[0]);
 			fflush(stdout);
 			return CLOSE_UNEXPECTED;
